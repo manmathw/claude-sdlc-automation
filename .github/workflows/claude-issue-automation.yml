@@ -21,8 +21,46 @@ jobs:
       - name: Run Claude
         env:
           ANTHROPIC_API_KEY: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_LABELS: ${{ join(github.event.issue.labels.*.name, ',') }}
         run: |
+          echo "Processing issue with labels - $ISSUE_LABELS"
+          
+          # Determine skill file based on label
+          SKILL_FILE=""
+          if echo "$ISSUE_LABELS" | grep -q "greenfield"; then
+            SKILL_FILE=".ai/skills/greenfield/skill.md"
+          elif echo "$ISSUE_LABELS" | grep -q "feature"; then
+            SKILL_FILE=".ai/skills/feature/skill.md"
+          elif echo "$ISSUE_LABELS" | grep -q "upgrade"; then
+            SKILL_FILE=".ai/skills/upgrade/skill.md"
+          else
+            echo "No matching label found. Exiting."
+            exit 0
+          fi
+          
+          echo "Using skill file - $SKILL_FILE"
+          
+          # Build input with issue details and skill instructions
+          cat > /tmp/claude_input.txt <<'INPUTEND'
+          GitHub Issue Processing Request
+          
+          INPUTEND
+          echo "Issue Title - $ISSUE_TITLE" >> /tmp/claude_input.txt
+          echo "" >> /tmp/claude_input.txt
+          echo "Issue Body - $ISSUE_BODY" >> /tmp/claude_input.txt
+          echo "" >> /tmp/claude_input.txt
+          echo "Issue Labels - $ISSUE_LABELS" >> /tmp/claude_input.txt
+          echo "" >> /tmp/claude_input.txt
+          echo "Instructions from $SKILL_FILE" >> /tmp/claude_input.txt
+          echo "---" >> /tmp/claude_input.txt
+          cat "$SKILL_FILE" >> /tmp/claude_input.txt
+          echo "" >> /tmp/claude_input.txt
+          echo "---" >> /tmp/claude_input.txt
+          echo "Follow the skill instructions above. Create a branch, implement changes, commit, and open a PR. Include risk classification and follow governance rules from .ai/governance/ and .ai/policies/." >> /tmp/claude_input.txt
+          
           claude-code run \
             --model sonnet-4.6 \
             --mode thinking \
-            --input "Process issue and follow .ai/router/issue_router.md"
+            --input "$(cat /tmp/claude_input.txt)"
