@@ -13,54 +13,40 @@ jobs:
       issues: write
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Install Claude CLI
-        run: npm install -g @anthropic-ai/claude-code
-
-      - name: Run Claude
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          ISSUE_TITLE: ${{ github.event.issue.title }}
-          ISSUE_BODY: ${{ github.event.issue.body }}
-          ISSUE_LABELS: ${{ join(github.event.issue.labels.*.name, ',') }}
+      - name: Determine skill file
+        id: skill
         run: |
-          echo "Processing issue with labels - $ISSUE_LABELS"
+          LABELS="${{ join(github.event.issue.labels.*.name, ',') }}"
+          echo "Labels: $LABELS"
           
-          # Determine skill file based on label
-          SKILL_FILE=""
-          if echo "$ISSUE_LABELS" | grep -q "greenfield"; then
-            SKILL_FILE=".ai/skills/greenfield/skill.md"
-          elif echo "$ISSUE_LABELS" | grep -q "feature"; then
-            SKILL_FILE=".ai/skills/feature/skill.md"
-          elif echo "$ISSUE_LABELS" | grep -q "upgrade"; then
-            SKILL_FILE=".ai/skills/upgrade/skill.md"
+          if echo "$LABELS" | grep -q "greenfield"; then
+            echo "skill_file=.ai/skills/greenfield/skill.md" >> $GITHUB_OUTPUT
+          elif echo "$LABELS" | grep -q "feature"; then
+            echo "skill_file=.ai/skills/feature/skill.md" >> $GITHUB_OUTPUT
+          elif echo "$LABELS" | grep -q "upgrade"; then
+            echo "skill_file=.ai/skills/upgrade/skill.md" >> $GITHUB_OUTPUT
           else
-            echo "No matching label found. Exiting."
-            exit 0
+            echo "No matching label found"
+            echo "skill_file=" >> $GITHUB_OUTPUT
           fi
-          
-          echo "Using skill file - $SKILL_FILE"
-          
-          # Build input with issue details and skill instructions
-          cat > /tmp/claude_input.txt <<'INPUTEND'
-          GitHub Issue Processing Request
-          
-          INPUTEND
-          echo "Issue Title - $ISSUE_TITLE" >> /tmp/claude_input.txt
-          echo "" >> /tmp/claude_input.txt
-          echo "Issue Body - $ISSUE_BODY" >> /tmp/claude_input.txt
-          echo "" >> /tmp/claude_input.txt
-          echo "Issue Labels - $ISSUE_LABELS" >> /tmp/claude_input.txt
-          echo "" >> /tmp/claude_input.txt
-          echo "Instructions from $SKILL_FILE" >> /tmp/claude_input.txt
-          echo "---" >> /tmp/claude_input.txt
-          cat "$SKILL_FILE" >> /tmp/claude_input.txt
-          echo "" >> /tmp/claude_input.txt
-          echo "---" >> /tmp/claude_input.txt
-          echo "Follow the skill instructions above. Create a branch, implement changes, commit, and open a PR. Include risk classification and follow governance rules from .ai/governance/ and .ai/policies/." >> /tmp/claude_input.txt
-          
-          claude-code run \
-            --model sonnet-4.6 \
-            --mode thinking \
-            --input "$(cat /tmp/claude_input.txt)"
+
+      - name: Run Claude Issue Automation
+        if: steps.skill.outputs.skill_file != ''
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            Process GitHub issue #${{ github.event.issue.number }}
+            
+            Title: ${{ github.event.issue.title }}
+            Body: ${{ github.event.issue.body }}
+            Labels: ${{ join(github.event.issue.labels.*.name, ', ') }}
+            
+            Follow instructions in ${{ steps.skill.outputs.skill_file }}
+            Apply governance rules from .ai/governance/ and .ai/policies/
+            Create a branch, implement changes, and open a PR with risk classification
