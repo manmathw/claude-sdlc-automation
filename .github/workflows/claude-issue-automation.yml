@@ -24,49 +24,8 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
-            Process GitHub issue #${{ github.event.issue.number }}
+            GitHub Issue #${{ github.event.issue.number }}: ${{ github.event.issue.title }}
             
-            Issue Title: ${{ github.event.issue.title }}
-            
-            Issue Body:
             ${{ github.event.issue.body }}
             
-            Issue Labels: ${{ join(github.event.issue.labels.*.name, ', ') }}
-            
-            ---
-            INSTRUCTIONS:
-            
-            Analyze this issue and determine the appropriate action:
-            
-            1. If this is a NEW PROJECT/GREENFIELD request:
-               - Create production-ready scaffold for Vue + Node.js + PostgreSQL stack
-               - Backend: Express.js with proper folder structure, PostgreSQL integration, health endpoints, logging, OpenAPI docs, tests
-               - Frontend: Vue 3 with Composition API, Pinia, Vue Router, Vite, tests
-               - Infrastructure: Dockerfiles, docker-compose with all services
-            
-            2. If this is a FEATURE request:
-               - Implement the feature with minimal file changes
-               - Keep controllers thin
-               - Add unit tests
-               - Update API docs
-               - Ensure no breaking changes
-            
-            3. If this is an UPGRADE/DEPENDENCY request:
-               - Identify current and target versions
-               - Analyze breaking changes
-               - Refactor deprecated APIs
-               - Run build and fix errors
-               - Update Docker/CI if needed
-               - Summarize migration risks
-            
-            ---
-            EXECUTION REQUIREMENTS:
-            - Review and apply governance rules from .ai/governance/ and .ai/policies/
-            - Create a new branch for your changes
-            - Implement the requested changes
-            - Run tests and ensure they pass
-            - Open a PR with:
-              * Clear summary of changes
-              * Risk classification (from .ai/governance/risk_classification.md)
-              * Test results
-            - Follow architecture principles from .ai/policies/
+            Create a new branch, implement the requested changes, and open a pull request with a summary of your work.
