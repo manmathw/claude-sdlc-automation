@@ -2,7 +2,7 @@ name: Claude Issue Automation
 
 on:
   issues:
-    types: [opened, labeled]
+    types: [opened]
 
 jobs:
   claude:
@@ -19,37 +19,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Determine skill file
-        id: skill
-        run: |
-          LABELS="${{ join(github.event.issue.labels.*.name, ',') }}"
-          echo "Labels: $LABELS"
-          
-          if echo "$LABELS" | grep -q "greenfield"; then
-            echo "skill_file=.ai/skills/greenfield/skill.md" >> $GITHUB_OUTPUT
-            echo "has_skill=true" >> $GITHUB_OUTPUT
-          elif echo "$LABELS" | grep -q "feature"; then
-            echo "skill_file=.ai/skills/feature/skill.md" >> $GITHUB_OUTPUT
-            echo "has_skill=true" >> $GITHUB_OUTPUT
-          elif echo "$LABELS" | grep -q "upgrade"; then
-            echo "skill_file=.ai/skills/upgrade/skill.md" >> $GITHUB_OUTPUT
-            echo "has_skill=true" >> $GITHUB_OUTPUT
-          else
-            echo "No matching label found"
-            echo "has_skill=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Read skill content
-        if: steps.skill.outputs.has_skill == 'true'
-        id: skill_content
-        run: |
-          SKILL_CONTENT=$(cat "${{ steps.skill.outputs.skill_file }}")
-          echo "skill_content<<EOF" >> $GITHUB_OUTPUT
-          echo "$SKILL_CONTENT" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
       - name: Run Claude Issue Automation
-        if: steps.skill.outputs.has_skill == 'true'
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -64,12 +34,33 @@ jobs:
             Issue Labels: ${{ join(github.event.issue.labels.*.name, ', ') }}
             
             ---
-            SKILL INSTRUCTIONS:
-            ${{ steps.skill_content.outputs.skill_content }}
+            INSTRUCTIONS:
+            
+            Analyze this issue and determine the appropriate action:
+            
+            1. If this is a NEW PROJECT/GREENFIELD request:
+               - Create production-ready scaffold for Vue + Node.js + PostgreSQL stack
+               - Backend: Express.js with proper folder structure, PostgreSQL integration, health endpoints, logging, OpenAPI docs, tests
+               - Frontend: Vue 3 with Composition API, Pinia, Vue Router, Vite, tests
+               - Infrastructure: Dockerfiles, docker-compose with all services
+            
+            2. If this is a FEATURE request:
+               - Implement the feature with minimal file changes
+               - Keep controllers thin
+               - Add unit tests
+               - Update API docs
+               - Ensure no breaking changes
+            
+            3. If this is an UPGRADE/DEPENDENCY request:
+               - Identify current and target versions
+               - Analyze breaking changes
+               - Refactor deprecated APIs
+               - Run build and fix errors
+               - Update Docker/CI if needed
+               - Summarize migration risks
             
             ---
             EXECUTION REQUIREMENTS:
-            - Follow the skill instructions above
             - Review and apply governance rules from .ai/governance/ and .ai/policies/
             - Create a new branch for your changes
             - Implement the requested changes
