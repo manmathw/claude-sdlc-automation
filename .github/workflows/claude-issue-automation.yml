@@ -20,7 +20,7 @@ jobs:
 
       - name: Run Claude
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
           claude-code run \
             --model sonnet-4.6 \
