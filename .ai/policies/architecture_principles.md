@@ -1,0 +1,4 @@
+- Controllers thin
+- Business logic in service layer
+- Constructor injection
+- APIs documented

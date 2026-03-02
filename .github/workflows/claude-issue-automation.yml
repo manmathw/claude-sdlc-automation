@@ -1,0 +1,28 @@
+name: Claude Issue Automation
+
+on:
+  issues:
+    types: [opened, labeled]
+
+jobs:
+  claude:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Claude CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Run Claude
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          claude-code run \
+            --model sonnet-4.6 \
+            --mode thinking \
+            --input "Process issue and follow .ai/router/issue_router.md"

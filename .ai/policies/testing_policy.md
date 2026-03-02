@@ -1,0 +1,2 @@
+- 80% coverage for changed files
+- No disabled tests

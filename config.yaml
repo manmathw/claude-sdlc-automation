@@ -1,0 +1,16 @@
+model:
+  default: sonnet-4.6
+  complex_reasoning_mode: thinking
+
+execution_rules:
+  never_push_to_main: true
+  always_create_branch: true
+  always_open_pr: true
+  follow_governance: true
+
+risk:
+  require_risk_evaluation_before_pr: true
+
+ci:
+  allow_auto_fix: true
+  max_auto_fix_attempts: 3
