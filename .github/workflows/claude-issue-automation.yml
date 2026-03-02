@@ -11,6 +11,7 @@ jobs:
       contents: write
       pull-requests: write
       issues: write
+      id-token: write
 
     steps:
       - name: Checkout repository
@@ -26,27 +27,55 @@ jobs:
           
           if echo "$LABELS" | grep -q "greenfield"; then
             echo "skill_file=.ai/skills/greenfield/skill.md" >> $GITHUB_OUTPUT
+            echo "has_skill=true" >> $GITHUB_OUTPUT
           elif echo "$LABELS" | grep -q "feature"; then
             echo "skill_file=.ai/skills/feature/skill.md" >> $GITHUB_OUTPUT
+            echo "has_skill=true" >> $GITHUB_OUTPUT
           elif echo "$LABELS" | grep -q "upgrade"; then
             echo "skill_file=.ai/skills/upgrade/skill.md" >> $GITHUB_OUTPUT
+            echo "has_skill=true" >> $GITHUB_OUTPUT
           else
             echo "No matching label found"
-            echo "skill_file=" >> $GITHUB_OUTPUT
+            echo "has_skill=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Read skill content
+        if: steps.skill.outputs.has_skill == 'true'
+        id: skill_content
+        run: |
+          SKILL_CONTENT=$(cat "${{ steps.skill.outputs.skill_file }}")
+          echo "skill_content<<EOF" >> $GITHUB_OUTPUT
+          echo "$SKILL_CONTENT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Run Claude Issue Automation
-        if: steps.skill.outputs.skill_file != ''
+        if: steps.skill.outputs.has_skill == 'true'
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
             Process GitHub issue #${{ github.event.issue.number }}
             
-            Title: ${{ github.event.issue.title }}
-            Body: ${{ github.event.issue.body }}
-            Labels: ${{ join(github.event.issue.labels.*.name, ', ') }}
+            Issue Title: ${{ github.event.issue.title }}
             
-            Follow instructions in ${{ steps.skill.outputs.skill_file }}
-            Apply governance rules from .ai/governance/ and .ai/policies/
-            Create a branch, implement changes, and open a PR with risk classification
+            Issue Body:
+            ${{ github.event.issue.body }}
+            
+            Issue Labels: ${{ join(github.event.issue.labels.*.name, ', ') }}
+            
+            ---
+            SKILL INSTRUCTIONS:
+            ${{ steps.skill_content.outputs.skill_content }}
+            
+            ---
+            EXECUTION REQUIREMENTS:
+            - Follow the skill instructions above
+            - Review and apply governance rules from .ai/governance/ and .ai/policies/
+            - Create a new branch for your changes
+            - Implement the requested changes
+            - Run tests and ensure they pass
+            - Open a PR with:
+              * Clear summary of changes
+              * Risk classification (from .ai/governance/risk_classification.md)
+              * Test results
+            - Follow architecture principles from .ai/policies/

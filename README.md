@@ -12,8 +12,9 @@ AI + Human approval workflow using Claude Code.
 
 ## Setup
 
-1. Add ANTHROPIC_API_KEY secret.
-2. Enable branch protection.
-3. Add required reviewers.
+1. Add `CLAUDE_CODE_OAUTH_TOKEN` secret to your GitHub repository.
+2. Enable branch protection on main branch.
+3. Add required reviewers for PRs.
+4. Create labels: `greenfield`, `feature`, `upgrade` for issue automation.
 
 ## TEST
